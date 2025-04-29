@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Valuuttamuunnin</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Valuuttamuunnin</h1>
+
+    <div class="converter">
+        <label for="amount">Määrä:</label>
+        <input type="number" id="amount" value="1">
+
+        <label for="fromCurrency">Mistä:</label>
+        <select id="fromCurrency"></select>
+
+        <label for="toCurrency">Mihin:</label>
+        <select id="toCurrency"></select>
+
+        <button onclick="convertCurrency()">Muunna</button>
+
+        <div id="conversionResult"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
