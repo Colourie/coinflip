@@ -60,4 +60,6 @@ async function convertCurrency() {
 }
 
 // Täytetään valuuttavalikot sivun latautuessa.
-fillCurrencies();
+fillCurrencies();amountInput.addEventListener('keydown', function (event) {
+    if (event.key === 'Enter') {
+        convertCurrency();
