@@ -1,4 +1,4 @@
-// Määritellään API:n perusosoite ja haetaan HTML-elementit.
+// Määritellään API:n perusosoite ja haetaan HTML-elementit
 const apiUrl = 'https://api.frankfurter.dev/v1';
 const amountInput = document.getElementById('amount');
 const fromSelect = document.getElementById('fromCurrency');
@@ -37,7 +37,8 @@ async function fillCurrencies() {
 async function convertCurrency() {
     const amount = amountInput.value; // Haetaan muunnettava määrä.
     const from = fromSelect.value;     // Haetaan lähtövaluutta.
-    const to = toSelect.value;        // Haetaan kohdevaluutta.
+    const to = toSelect.value;         // Haetaan kohdevaluutta.
+    const decimalPlacesSelect = document.getElementById('decimalPlaces'); // HAETAAN ELEMENTTI TÄÄLLÄ
 
     // Tarkistetaan, että syöte on kelvollinen.
     if (!amount || isNaN(amount) || amount <= 0) {
@@ -50,8 +51,14 @@ async function convertCurrency() {
         const data = await response.json(); // Muutetaan vastaus JSON-muotoon.
 
         if (data.rates && data.rates[to]) {
-            // Jos kurssi löytyy, näytetään tulos.
-            resultDiv.textContent = `${amount} ${from} on ${data.rates[to].toFixed(2)} ${to}`;
+            // Lisätty pyöristyksen hallinta tähän:
+            const selectedDecimalPlaces = decimalPlacesSelect ? decimalPlacesSelect.value : '2'; // Käytetään oletusarvoa, jos elementtiä ei löydy
+            let convertedAmount = data.rates[to];
+            if (selectedDecimalPlaces !== '0') {
+                convertedAmount = parseFloat(convertedAmount).toFixed(parseInt(selectedDecimalPlaces));
+            }
+            // Näytetään tulos pyöristettynä tai ilman pyöristystä.
+            resultDiv.textContent = `${amount} ${from} on ${convertedAmount} ${to}`;
         } else {
             // Jos muunnos epäonnistuu, näytetään virheilmoitus.
             resultDiv.textContent = 'Muunnos epäonnistui.';
@@ -71,7 +78,7 @@ amountInput.addEventListener('keydown', function (event) {
         convertCurrency();
     }
 });
-    
+
 
 async function fetchHistoricalRates() {
     // Hakee päivämäärän valintakentästä.
