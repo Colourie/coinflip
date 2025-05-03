@@ -71,6 +71,7 @@ amountInput.addEventListener('keydown', function (event) {
         convertCurrency();
     }
 });
+    
 
 async function fetchHistoricalRates() {
     // Hakee päivämäärän valintakentästä.
@@ -104,4 +105,3 @@ async function fetchHistoricalRates() {
         resultDiv.textContent = 'Historiallista kurssia ei löytynyt.';
     }
 }
-
