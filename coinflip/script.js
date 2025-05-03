@@ -62,8 +62,42 @@ async function convertCurrency() {
 // Täytetään valuuttavalikot sivun latautuessa.
 fillCurrencies();
 
+// Enter-näppäimen käyttö 'määrä'-kentässä.
 amountInput.addEventListener('keydown', function (event) {
     if (event.key === 'Enter') {
         convertCurrency();
+    }
+});
+
+async function fetchHistoricalRates() {
+    // Hakee päivämäärän valintakentästä.
+    const date = document.getElementById('historicalDate').value;
+    // Hakee lähtövaluutan pudotusvalikosta.
+    const from = document.getElementById('fromCurrency').value;
+    // Hakee kohdevaluutan pudotusvalikosta.
+    const to = document.getElementById('toCurrency').value;
+    // Hakee div-elementin, jossa tulos näytetään.
+    const resultDiv = document.getElementById('historicalResult');
+
+    // Tarkistaa, onko käyttäjä valinnut päivämäärän. Jos ei, näyttää viestin ja lopettaa funktion suorituksen.
+    if (!date) {
+        resultDiv.textContent = 'Valitse päivämäärä.';
+        return;
+    }
+
+    // Muodostaa API-URL:n historiallisen kurssin hakemista varten.
+    const url = `${apiUrl}/${date}?base=${from}&symbols=${to}`;
+
+    // Lähettää pyynnön API:lle.
+    const response = await fetch(url);
+    // Muuntaa API:n vastauksen JSON-muotoon.
+    const data = await response.json();
+
+    // Tarkistaa, onko kurssitieto olemassa vastauksessa ja näyttää tuloksen.
+    if (data.rates && data.rates[to]) {
+        resultDiv.textContent = `Kurssi ${from}-${to} ${date}: ${data.rates[to]}`;
+    } else {
+        // Jos historiallista kurssia ei löydy, näyttää viestin.
+        resultDiv.textContent = 'Historiallista kurssia ei löytynyt.';
     }
 }

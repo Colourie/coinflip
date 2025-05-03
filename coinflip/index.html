@@ -25,5 +25,14 @@
     </div>
 
     <script src="script.js"></script>
+
+    <div class="historical-rates">
+        <h2>Hae historiallinen kurssi</h2>
+        <label for="historicalDate">Valitse päivämäärä:</label>
+        <input type="date" id="historicalDate">
+        <button onclick="fetchHistoricalRates()">Hae historialliset kurssit</button>
+        <div id="historicalResult"></div>
+    </div>
+    
 </body>
 </html>
