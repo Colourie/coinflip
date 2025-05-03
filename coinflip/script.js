@@ -7,6 +7,7 @@ const resultDiv = document.getElementById('conversionResult');
 
 // Funktio valuuttavalintojen täyttämiseen pudotusvalikoihin.
 async function fillCurrencies() {
+    try {
     const response = await fetch(`${apiUrl}/currencies`); // Lähetetään pyyntö valuuttalistan hakemiseksi.
     const data = await response.json(); // Muutetaan vastaus JSON-muotoon.
     for (const code in data) {
@@ -24,6 +25,10 @@ async function fillCurrencies() {
     // Oletusvalinnat valluuttavalikoille
     fromSelect.value = 'EUR';
     toSelect.value = 'USD';
+} catch (error) {
+    resultDiv.textContent = 'Virhe ladattaessa valuuttoja.';
+    console.error('Virhe valuuttojen haussa:', error);
+}
 }
 
 // Funktio valuutan muuntamista varten.
@@ -31,14 +36,26 @@ async function convertCurrency() {
     const amount = amountInput.value; // Haetaan muunnettava määrä.
     const from = fromSelect.value;     // Haetaan lähtövaluutta.
     const to = toSelect.value;       // Haetaan kohdevaluutta.
-    const response = await fetch(`${apiUrl}/latest?amount=${amount}&from=${from}&to=${to}`); // Lähetetään pyyntö muunnoskurssille.
-    const data = await response.json(); // Muutetaan vastaus JSON-muotoon.
-    if (data.rates && data.rates[to]) {
-        // Jos kurssi löytyy, näytetään tulos.
-        resultDiv.textContent = `${amount} ${from} on ${data.rates[to].toFixed(2)} ${to}`;
-    } else {
-        // Jos muunnos epäonnistuu, näytetään virheilmoitus.
-        resultDiv.textContent = 'Muunnos epäonnistui.';
+     // Tarkistetaan, että syöte on kelvollinen.
+     if (!amount || isNaN(amount) || amount <= 0) {
+        resultDiv.textContent = 'Anna kelvollinen positiivinen summa.';
+        return;
+    }
+
+    try {
+        const response = await fetch(`${apiUrl}/latest?amount=${amount}&from=${from}&to=${to}`); // Lähetetään pyyntö muunnoskurssille.
+        const data = await response.json(); // Muutetaan vastaus JSON-muotoon.
+
+        if (data.rates && data.rates[to]) {
+            // Jos kurssi löytyy, näytetään tulos.
+            resultDiv.textContent = `${amount} ${from} on ${data.rates[to].toFixed(2)} ${to}`;
+        } else {
+            // Jos muunnos epäonnistuu, näytetään virheilmoitus.
+            resultDiv.textContent = 'Muunnos epäonnistui.';
+        }
+    } catch (error) {
+        resultDiv.textContent = 'Virhe haettaessa muunnostietoja.';
+        console.error('Virhe muunnoksessa:', error);
     }
 }
 
