@@ -5,6 +5,9 @@ const fromSelect = document.getElementById('fromCurrency');
 const toSelect = document.getElementById('toCurrency');
 const resultDiv = document.getElementById('conversionResult');
 
+// Muistaa edellisen syötetyn arvo
+let previousAmount = amountInput.value;
+
 // Funktio valuuttavalintojen täyttämiseen pudotusvalikoihin.
 async function fillCurrencies() {
     try {
@@ -38,6 +41,7 @@ async function convertCurrency() {
     const amount = amountInput.value; // Haetaan muunnettava määrä.
     const from = fromSelect.value;     // Haetaan lähtövaluutta.
     const to = toSelect.value;         // Haetaan kohdevaluutta.
+    previousAmount = amount; // Päivitetään edellinen määrä.
     const decimalPlacesSelect = document.getElementById('decimalPlaces'); // HAETAAN ELEMENTTI TÄÄLLÄ
 
     // Tarkistetaan, että syöte on kelvollinen.
@@ -72,6 +76,16 @@ async function convertCurrency() {
 // Täytetään valuuttavalikot sivun latautuessa.
 fillCurrencies();
 
+// Muutoksien seuraus "Mistä"-valuuttavalikossa
+fromSelect.addEventListener('change', function() {
+    amountInput.value = previousAmount;
+});
+
+// Muutoksien seuraus "Mihin"-valuuttavalikossa
+toSelect.addEventListener('change', function() {
+    amountInput.value = previousAmount;
+});
+
 // Enter-näppäimen käyttö 'määrä'-kentässä.
 amountInput.addEventListener('keydown', function (event) {
     if (event.key === 'Enter') {
@@ -104,7 +118,7 @@ async function fetchHistoricalRates() {
     // Muuntaa API:n vastauksen JSON-muotoon.
     const data = await response.json();
 
-    // Tarkistaa, onko kurssitieto olemassa vastauksessa ja näyttää tuloksen.
+    // Tarkistaa, onko kurssitieto olemassa ja näyttää tuloksen.
     if (data.rates && data.rates[to]) {
         resultDiv.textContent = `Kurssi ${from}-${to} ${date}: ${data.rates[to]}`;
     } else {
