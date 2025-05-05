@@ -1,4 +1,4 @@
-// Määritellään api:n perusosoite ja haetaan html-elementit
+// Määritellään API:n perusosoite ja haetaan HTML-elementit
 const apiUrl = 'https://api.frankfurter.dev/v1';
 const amountInput = document.getElementById('amount');
 const fromSelect = document.getElementById('fromCurrency');
@@ -76,6 +76,21 @@ async function convertCurrency() {
 // Täytetään valuuttavalikot sivun latautuessa.
 fillCurrencies();
 
+// Haetaan kääntämisnappi HTML:stä
+const swapButton = document.getElementById('swapCurrencies');
+
+// Lisätään tapahtumakuuntelija kääntämisnappille
+if (swapButton) {
+    swapButton.addEventListener('click', function() {
+        // Haetaan nykyiset valinnat valuuttavalikoista
+        const currentFrom = fromSelect.value;
+        const currentTo = toSelect.value;
+
+        // Vaihdetaan valinnat
+        fromSelect.value = currentTo;
+        toSelect.value = currentFrom;
+    });
+} 
 // Muutoksien seuraus "Mistä"-valuuttavalikossa
 fromSelect.addEventListener('change', function() {
     amountInput.value = previousAmount;
@@ -103,9 +118,9 @@ async function fetchHistoricalRates() {
     const to = document.getElementById('toCurrency').value;
     // Hakee div-elementin, jossa tulos näytetään.
     const resultDiv = document.getElementById('historicalResult');
-    // haetaan desimaalien valintaelementti
+    // Haetaan desimaalien valintaelementti
     const decimalPlacesSelect = document.getElementById('decimalPlaces');
-    // haetaan valittu desimaalien määrä, käytetään oletusarvoa '2' jos elementtiä ei löydy
+    // Haetaan valittu desimaalien määrä, käytetään oletusarvoa '2' jos elementtiä ei löydy
     const selectedDecimalPlaces = decimalPlacesSelect ? decimalPlacesSelect.value : '2';
 
     // Tarkistaa, onko käyttäjä valinnut päivämäärän. Jos ei, näyttää viestin ja lopettaa funktion suorituksen.
@@ -114,12 +129,12 @@ async function fetchHistoricalRates() {
         return;
     }
 
-    // Muodostaa api-url:n historiallisen kurssin hakemista varten.
+    // Muodostaa API-URL:n historiallisen kurssin hakemista varten.
     const url = `${apiUrl}/${date}?base=${from}&symbols=${to}`;
 
-    // Lähettää pyynnön api:lle.
+    // Lähettää pyynnön API:lle.
     const response = await fetch(url);
-    // Muuntaa api:n vastauksen json-muotoon.
+    // Muuntaa API:n vastauksen JSON-muotoon.
     const data = await response.json();
 
     // Tarkistaa, onko kurssitieto olemassa ja näyttää tuloksen.
