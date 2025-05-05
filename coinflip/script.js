@@ -1,4 +1,4 @@
-// Määritellään API:n perusosoite ja haetaan HTML-elementit
+// Määritellään api:n perusosoite ja haetaan html-elementit
 const apiUrl = 'https://api.frankfurter.dev/v1';
 const amountInput = document.getElementById('amount');
 const fromSelect = document.getElementById('fromCurrency');
@@ -42,7 +42,7 @@ async function convertCurrency() {
     const from = fromSelect.value;     // Haetaan lähtövaluutta.
     const to = toSelect.value;         // Haetaan kohdevaluutta.
     previousAmount = amount; // Päivitetään edellinen määrä.
-    const decimalPlacesSelect = document.getElementById('decimalPlaces'); // HAETAAN ELEMENTTI TÄÄLLÄ
+    const decimalPlacesSelect = document.getElementById('decimalPlaces'); // Haetaan elementti täällä
 
     // Tarkistetaan, että syöte on kelvollinen.
     if (!amount || isNaN(amount) || amount <= 0) {
@@ -103,6 +103,10 @@ async function fetchHistoricalRates() {
     const to = document.getElementById('toCurrency').value;
     // Hakee div-elementin, jossa tulos näytetään.
     const resultDiv = document.getElementById('historicalResult');
+    // haetaan desimaalien valintaelementti
+    const decimalPlacesSelect = document.getElementById('decimalPlaces');
+    // haetaan valittu desimaalien määrä, käytetään oletusarvoa '2' jos elementtiä ei löydy
+    const selectedDecimalPlaces = decimalPlacesSelect ? decimalPlacesSelect.value : '2';
 
     // Tarkistaa, onko käyttäjä valinnut päivämäärän. Jos ei, näyttää viestin ja lopettaa funktion suorituksen.
     if (!date) {
@@ -110,17 +114,22 @@ async function fetchHistoricalRates() {
         return;
     }
 
-    // Muodostaa API-URL:n historiallisen kurssin hakemista varten.
+    // Muodostaa api-url:n historiallisen kurssin hakemista varten.
     const url = `${apiUrl}/${date}?base=${from}&symbols=${to}`;
 
-    // Lähettää pyynnön API:lle.
+    // Lähettää pyynnön api:lle.
     const response = await fetch(url);
-    // Muuntaa API:n vastauksen JSON-muotoon.
+    // Muuntaa api:n vastauksen json-muotoon.
     const data = await response.json();
 
     // Tarkistaa, onko kurssitieto olemassa ja näyttää tuloksen.
     if (data.rates && data.rates[to]) {
-        resultDiv.textContent = `Kurssi ${from}-${to} ${date}: ${data.rates[to]}`;
+        let historicalRate = data.rates[to];
+        // pyöristetään historiallinen kurssi valitun desimaalien määrän mukaan
+        if (selectedDecimalPlaces !== '0') {
+            historicalRate = parseFloat(historicalRate).toFixed(parseInt(selectedDecimalPlaces));
+        }
+        resultDiv.textContent = `Kurssi ${from}-${to} ${date}: ${historicalRate}`;
     } else {
         // Jos historiallista kurssia ei löydy, näyttää viestin.
         resultDiv.textContent = 'Historiallista kurssia ei löytynyt.';
