@@ -21,6 +21,15 @@ let decimalPlacesSelect;
 let historicalResultDiv;
 
 
+let resetDefaultsButton;
+
+
+const DEFAULT_AMOUNT = 1;
+const DEFAULT_FROM_CURRENCY = 'EUR';
+const DEFAULT_TO_CURRENCY = 'USD';
+const DEFAULT_HISTORICAL_DATE = ''; 
+
+
 // Funktio valuuttavalintojen täyttämiseen pudotusvalikoihin.
 async function fillCurrencies() {
     try {
@@ -108,18 +117,32 @@ async function plotHistoricalRates() {
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: true,
+                    maintainAspectRatio: true, 
                     scales: {
                         x: {
                             title: {
                                 display: true,
-                                text: 'Päivämäärä'
+                                text: 'Päivämäärä',
+                                color: '#e0e0e0' 
+                            },
+                            ticks: {
+                                color: '#e0e0e0' 
+                            },
+                            grid: {
+                                color: 'rgba(100, 100, 100, 0.2)' 
                             }
                         },
                         y: {
                             title: {
                                 display: true,
-                                text: `Kurssi (${from} -> ${to})`
+                                text: `Kurssi (${from} -> ${to})`,
+                                color: '#e0e0e0' 
+                            },
+                            ticks: {
+                                color: '#e0e0e0' 
+                            },
+                            grid: {
+                                color: 'rgba(100, 100, 100, 0.2)' 
                             }
                         }
                     },
@@ -129,6 +152,11 @@ async function plotHistoricalRates() {
                                 label: function(context) {
                                     return `${context.dataset.label}: ${context.parsed.y.toFixed(4)}`;
                                 }
+                            }
+                        },
+                        legend: { 
+                            labels: {
+                                color: '#e0e0e0' 
                             }
                         }
                     }
@@ -188,9 +216,10 @@ async function convertCurrency() {
 }
 
 async function fetchHistoricalRates() {
-    if (!document.getElementById('historicalDate') || !fromSelect || !toSelect || !historicalResultDiv || !decimalPlacesSelect) return; // Turvatarkistus
+    const historicalDateInput = document.getElementById('historicalDate'); // Haetaan tässä, koska se ei ole globaali
+    if (!historicalDateInput || !fromSelect || !toSelect || !historicalResultDiv || !decimalPlacesSelect) return; // Turvatarkistus
 
-    const date = document.getElementById('historicalDate').value;
+    const date = historicalDateInput.value;
     const from = fromSelect.value;
     const to = toSelect.value;
     const selectedDecimalPlaces = decimalPlacesSelect.value;
@@ -220,8 +249,7 @@ async function fetchHistoricalRates() {
         console.error('Virhe historiallisen datan haussa:', error);
     }
 }
-
-// DOMContentLoaded-tapahtuma varmistaa, että kaikki HTML-elementit on ladattu ennen niiden käyttöä.
+// DOMContentLoaded-tapahtuma, joka käynnistää skriptin, kun DOM on ladattu.
 document.addEventListener('DOMContentLoaded', () => {
     // Haetaan HTML-elementit.
     amountInput = document.getElementById('amount');
@@ -229,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
     toSelect = document.getElementById('toCurrency');
     resultDiv = document.getElementById('conversionResult');
 
-    // Määritä previousAmount turvallisesti
+    
     previousAmount = amountInput ? amountInput.value : '1';
 
     historicalChartCanvas = document.getElementById('historicalChart');
@@ -239,16 +267,18 @@ document.addEventListener('DOMContentLoaded', () => {
     swapButton = document.getElementById('swapCurrencies');
     decimalPlacesSelect = document.getElementById('decimalPlaces');
     historicalResultDiv = document.getElementById('historicalResult');
+    
+    
+    resetDefaultsButton = document.getElementById('resetDefaultsButton');
 
 
-    // Täytetään valuuttavalikot sivun latautuessa ja piirretään graafi.
-    // Kutsutaan convertCurrency ja plotHistoricalRates vasta, kun valuutat on ladattu.
+    
     fillCurrencies().then(() => {
         convertCurrency();
         plotHistoricalRates();
     });
 
-    // Event listenerit eri elementeille
+    
     if (swapButton) {
         swapButton.addEventListener('click', function() {
             const currentFrom = fromSelect.value;
@@ -289,7 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
         chartTimeframeSelect.addEventListener('change', plotHistoricalRates);
     }
 
-    const historicalDateInput = document.getElementById('historicalDate');
+    const historicalDateInput = document.getElementById('historicalDate'); // Hakee tässä, koska sitä käytetään vain tässä
     const historicalFetchButton = document.querySelector('.historical-rates button');
 
     if (historicalDateInput && historicalFetchButton) {
@@ -299,5 +329,43 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         historicalFetchButton.addEventListener('click', fetchHistoricalRates);
+    }
+
+    //"Palauta oletukset" -nappi
+    if (resetDefaultsButton) {
+        resetDefaultsButton.addEventListener('click', () => {
+            // Palauta valuuttamuuntimen kentät
+            amountInput.value = DEFAULT_AMOUNT;
+            fromSelect.value = DEFAULT_FROM_CURRENCY;
+            toSelect.value = DEFAULT_TO_CURRENCY;
+            resultDiv.textContent = ''; 
+
+            // Palauta historiallisten kurssien kentät
+            if (historicalDateInput) { 
+                historicalDateInput.value = DEFAULT_HISTORICAL_DATE;
+            }
+            if (historicalResultDiv) {
+                historicalResultDiv.textContent = ''; // Tyhjennä historiallinen tulos
+            }
+
+            
+            if (decimalPlacesSelect) {
+                decimalPlacesSelect.value = '2'; 
+            }
+
+            
+            if (chartTimeframeSelect) {
+                chartTimeframeSelect.value = '7d';
+            }
+
+            // Tuhoa ja tyhjennä graafi
+            if (historicalChartInstance) {
+                historicalChartInstance.destroy();
+                historicalChartInstance = null;
+            }
+            if (historicalChartMessageDiv) {
+                historicalChartMessageDiv.textContent = ''; // Tyhjennä mahdolliset graafin virheviestit
+            }
+        });
     }
 }); // DOMContentLoaded loppuu

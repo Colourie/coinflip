@@ -211,6 +211,18 @@ h1 {
     box-sizing: border-box;
 }
 
+#resetDefaultsButton {
+    background-color: #303030;
+    border: 1px solid #424242;
+    color: #f5f5f5;
+    
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
 @media (max-width: 768px) {
     .converter {
         grid-template-columns: 1fr;
