@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Valuuttamuunnin</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <h1>Valuuttamuunnin</h1>
@@ -26,8 +27,6 @@
         <div id="conversionResult"></div>
     </div>
 
-    <script src="script.js"></script>
-
     <div class="historical-rates">
         <h2>Hae historiallinen kurssi</h2>
         <label for="historicalDate">Valitse päivämäärä:</label>
@@ -44,6 +43,20 @@
             <option value="0">Ei pyöristystä</option>
         </select>
     </div>
+    
+    <div style="width: 50%; margin: 20px auto; margin-top: 40px;">
+        <h2>Historiallinen kurssikehitys</h2>
+        <label for="chartTimeframe">Näytä viimeisimmät</label>
+        <select id="chartTimeframe">
+            <option value="7d">7 päivää</option>
+            <option value="30d">30 päivää</option>
+            <option value="90d">90 päivää</option>
+            <option value="1y">1 vuosi</option>
+        </select>
+        <canvas id="historicalChart" ></canvas>
+        <div id="historicalChartMessage" style="margin-top : 10px; color: red;"></div>
 
-</body>
-</html>
+        <script src="script.js"></script>
+    </div>
+       <body>
+        <html>

@@ -1,12 +1,25 @@
-// Määritellään API:n perusosoite ja haetaan HTML-elementit
+// Määritellään API:n perusosoite
 const apiUrl = 'https://api.frankfurter.dev/v1';
-const amountInput = document.getElementById('amount');
-const fromSelect = document.getElementById('fromCurrency');
-const toSelect = document.getElementById('toCurrency');
-const resultDiv = document.getElementById('conversionResult');
 
-// Muistaa edellisen syötetyn arvo
-let previousAmount = amountInput.value;
+// Globaali muuttuja Chart-instanssille (voidaan alustaa heti)
+let historicalChartInstance = null;
+
+// Muuttujat, joihin HTML-elementit tallennetaan.
+// Ne alustetaan vasta DOMContentLoaded-tapahtuman yhteydessä.
+let amountInput;
+let fromSelect;
+let toSelect;
+let resultDiv;
+let previousAmount;
+
+let historicalChartCanvas;
+let chartTimeframeSelect;
+let historicalChartMessageDiv;
+
+let swapButton;
+let decimalPlacesSelect;
+let historicalResultDiv;
+
 
 // Funktio valuuttavalintojen täyttämiseen pudotusvalikoihin.
 async function fillCurrencies() {
@@ -31,18 +44,122 @@ async function fillCurrencies() {
         fromSelect.value = 'EUR';
         toSelect.value = 'USD';
     } catch (error) {
-        resultDiv.textContent = 'Virhe ladattaessa valuuttoja.';
+        if (resultDiv) resultDiv.textContent = 'Virhe ladattaessa valuuttoja.';
         console.error('Virhe valuuttojen haussa:', error);
+    }
+}
+
+// Funktio historiallisten kurssien piirtämiseen
+async function plotHistoricalRates() {
+    if (!fromSelect || !toSelect || !historicalChartCanvas || !historicalChartMessageDiv || !chartTimeframeSelect) {
+        if (historicalChartMessageDiv) historicalChartMessageDiv.textContent = 'Odota, elementtejä ladataan...';
+        return;
+    }
+
+    const from = fromSelect.value;
+    const to = toSelect.value;
+    const chartTimeframe = chartTimeframeSelect.value;
+
+    historicalChartMessageDiv.textContent = ''; 
+
+    // Tämä tarkistus on edelleen tärkeä, jos valuuttoja ei ole vielä ladattu API:sta
+    if (!from || !to || (fromSelect.options.length <= 1 && toSelect.options.length <= 1)) {
+        historicalChartMessageDiv.textContent = 'Odota, valuuttoja ladataan...';
+        return; // Älä yritä piirtää graafia ilman valuuttoja
+    }
+
+    let startDate = new Date();
+    const endDate = new Date();
+
+    switch (chartTimeframe) {
+        case '7d': startDate.setDate(endDate.getDate() - 7); break;
+        case '30d': startDate.setDate(endDate.getDate() - 30); break;
+        case '90d': startDate.setDate(endDate.getDate() - 90); break;
+        case '1y': startDate.setFullYear(endDate.getFullYear() - 1); break;
+        default: startDate.setDate(endDate.getDate() - 30);
+    }
+
+    const formattedStartDate = startDate.toISOString().split('T')[0];
+    const formattedEndDate = endDate.toISOString().split('T')[0];
+
+    try {
+        const response = await fetch(`${apiUrl}/${formattedStartDate}..${formattedEndDate}?from=${from}&to=${to}`);
+        const data = await response.json();
+
+        if (data.rates && Object.keys(data.rates).length > 0) {
+            const dates = Object.keys(data.rates).sort();
+            const rates = dates.map(date => data.rates[date][to]);
+
+            if (historicalChartInstance) {
+                historicalChartInstance.destroy();
+            }
+
+            historicalChartInstance = new Chart(historicalChartCanvas, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: `Kurssi (${from} to ${to})`,
+                        data: rates,
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Päivämäärä'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: `Kurssi (${from} -> ${to})`
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y.toFixed(4)}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            // Jos dataa ei löytynyt, graafi tuhotaan ja näytetään viesti.
+            if (historicalChartInstance) {
+                historicalChartInstance.destroy();
+                historicalChartInstance = null;
+            }
+            historicalChartMessageDiv.textContent = 'Historiallista kurssidataa ei löytynyt valitulle aikavälille tai valuuttaparille.';
+        }
+    } catch (error) {
+        console.error('Virhe historiallisten kurssien piirtämisessä:', error);
+        if (historicalChartInstance) {
+            historicalChartInstance.destroy();
+            historicalChartInstance = null;
+        }
+        if (historicalChartMessageDiv) historicalChartMessageDiv.textContent = 'Virhe haettaessa graafidataa.';
     }
 }
 
 // Funktio valuutan muuntamista varten.
 async function convertCurrency() {
-    const amount = amountInput.value; // Haetaan muunnettava määrä.
-    const from = fromSelect.value;     // Haetaan lähtövaluutta.
-    const to = toSelect.value;         // Haetaan kohdevaluutta.
+    if (!amountInput || !fromSelect || !toSelect || !resultDiv) return; // Turvatarkistus
+
+    const amount = amountInput.value;
+    const from = fromSelect.value;
+    const to = toSelect.value;
     previousAmount = amount; // Päivitetään edellinen määrä.
-    const decimalPlacesSelect = document.getElementById('decimalPlaces'); // Haetaan elementti täällä
 
     // Tarkistetaan, että syöte on kelvollinen.
     if (!amount || isNaN(amount) || amount <= 0) {
@@ -55,98 +172,132 @@ async function convertCurrency() {
         const data = await response.json(); // Muutetaan vastaus JSON-muotoon.
 
         if (data.rates && data.rates[to]) {
-            // Lisätty pyöristyksen hallinta tähän:
-            const selectedDecimalPlaces = decimalPlacesSelect ? decimalPlacesSelect.value : '2'; // Käytetään oletusarvoa, jos elementtiä ei löydy
+            const selectedDecimalPlaces = decimalPlacesSelect ? decimalPlacesSelect.value : '2';
             let convertedAmount = data.rates[to];
             if (selectedDecimalPlaces !== '0') {
                 convertedAmount = parseFloat(convertedAmount).toFixed(parseInt(selectedDecimalPlaces));
             }
-            // Näytetään tulos pyöristettynä tai ilman pyöristystä.
             resultDiv.textContent = `${amount} ${from} on ${convertedAmount} ${to}`;
         } else {
-            // Jos muunnos epäonnistuu, näytetään virheilmoitus.
             resultDiv.textContent = 'Muunnos epäonnistui.';
         }
     } catch (error) {
-        resultDiv.textContent = 'Virhe haettaessa muunnostietoja.';
+        if (resultDiv) resultDiv.textContent = 'Virhe haettaessa muunnostietoja.';
         console.error('Virhe muunnoksessa:', error);
     }
 }
 
-// Täytetään valuuttavalikot sivun latautuessa.
-fillCurrencies();
-
-// Haetaan kääntämisnappi HTML:stä
-const swapButton = document.getElementById('swapCurrencies');
-
-// Lisätään tapahtumakuuntelija kääntämisnappille
-if (swapButton) {
-    swapButton.addEventListener('click', function() {
-        // Haetaan nykyiset valinnat valuuttavalikoista
-        const currentFrom = fromSelect.value;
-        const currentTo = toSelect.value;
-
-        // Vaihdetaan valinnat
-        fromSelect.value = currentTo;
-        toSelect.value = currentFrom;
-    });
-} 
-// Muutoksien seuraus "Mistä"-valuuttavalikossa
-fromSelect.addEventListener('change', function() {
-    amountInput.value = previousAmount;
-});
-
-// Muutoksien seuraus "Mihin"-valuuttavalikossa
-toSelect.addEventListener('change', function() {
-    amountInput.value = previousAmount;
-});
-
-// Enter-näppäimen käyttö 'määrä'-kentässä.
-amountInput.addEventListener('keydown', function (event) {
-    if (event.key === 'Enter') {
-        convertCurrency();
-    }
-});
-
-
 async function fetchHistoricalRates() {
-    // Hakee päivämäärän valintakentästä.
-    const date = document.getElementById('historicalDate').value;
-    // Hakee lähtövaluutan pudotusvalikosta.
-    const from = document.getElementById('fromCurrency').value;
-    // Hakee kohdevaluutan pudotusvalikosta.
-    const to = document.getElementById('toCurrency').value;
-    // Hakee div-elementin, jossa tulos näytetään.
-    const resultDiv = document.getElementById('historicalResult');
-    // Haetaan desimaalien valintaelementti
-    const decimalPlacesSelect = document.getElementById('decimalPlaces');
-    // Haetaan valittu desimaalien määrä, käytetään oletusarvoa '2' jos elementtiä ei löydy
-    const selectedDecimalPlaces = decimalPlacesSelect ? decimalPlacesSelect.value : '2';
+    if (!document.getElementById('historicalDate') || !fromSelect || !toSelect || !historicalResultDiv || !decimalPlacesSelect) return; // Turvatarkistus
 
-    // Tarkistaa, onko käyttäjä valinnut päivämäärän. Jos ei, näyttää viestin ja lopettaa funktion suorituksen.
+    const date = document.getElementById('historicalDate').value;
+    const from = fromSelect.value;
+    const to = toSelect.value;
+    const selectedDecimalPlaces = decimalPlacesSelect.value;
+
     if (!date) {
-        resultDiv.textContent = 'Valitse päivämäärä.';
+        historicalResultDiv.textContent = 'Valitse päivämäärä.';
         return;
     }
 
-    // Muodostaa API-URL:n historiallisen kurssin hakemista varten.
     const url = `${apiUrl}/${date}?base=${from}&symbols=${to}`;
 
-    // Lähettää pyynnön API:lle.
-    const response = await fetch(url);
-    // Muuntaa API:n vastauksen JSON-muotoon.
-    const data = await response.json();
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
 
-    // Tarkistaa, onko kurssitieto olemassa ja näyttää tuloksen.
-    if (data.rates && data.rates[to]) {
-        let historicalRate = data.rates[to];
-        // pyöristetään historiallinen kurssi valitun desimaalien määrän mukaan
-        if (selectedDecimalPlaces !== '0') {
-            historicalRate = parseFloat(historicalRate).toFixed(parseInt(selectedDecimalPlaces));
+        if (data.rates && data.rates[to]) {
+            let historicalRate = data.rates[to];
+            if (selectedDecimalPlaces !== '0') {
+                historicalRate = parseFloat(historicalRate).toFixed(parseInt(selectedDecimalPlaces));
+            }
+            historicalResultDiv.textContent = `Kurssi ${from}-${to} ${date}: ${historicalRate}`;
+        } else {
+            historicalResultDiv.textContent = 'Historiallista kurssia ei löytynyt.';
         }
-        resultDiv.textContent = `Kurssi ${from}-${to} ${date}: ${historicalRate}`;
-    } else {
-        // Jos historiallista kurssia ei löydy, näyttää viestin.
-        resultDiv.textContent = 'Historiallista kurssia ei löytynyt.';
+    } catch (error) {
+        if (historicalResultDiv) historicalResultDiv.textContent = 'Virhe haettaessa historiallista dataa.';
+        console.error('Virhe historiallisen datan haussa:', error);
     }
 }
+
+// DOMContentLoaded-tapahtuma varmistaa, että kaikki HTML-elementit on ladattu ennen niiden käyttöä.
+document.addEventListener('DOMContentLoaded', () => {
+    // Haetaan HTML-elementit.
+    amountInput = document.getElementById('amount');
+    fromSelect = document.getElementById('fromCurrency');
+    toSelect = document.getElementById('toCurrency');
+    resultDiv = document.getElementById('conversionResult');
+
+    // Määritä previousAmount turvallisesti
+    previousAmount = amountInput ? amountInput.value : '1';
+
+    historicalChartCanvas = document.getElementById('historicalChart');
+    chartTimeframeSelect = document.getElementById('chartTimeframe');
+    historicalChartMessageDiv = document.getElementById('historicalChartMessage');
+
+    swapButton = document.getElementById('swapCurrencies');
+    decimalPlacesSelect = document.getElementById('decimalPlaces');
+    historicalResultDiv = document.getElementById('historicalResult');
+
+
+    // Täytetään valuuttavalikot sivun latautuessa ja piirretään graafi.
+    // Kutsutaan convertCurrency ja plotHistoricalRates vasta, kun valuutat on ladattu.
+    fillCurrencies().then(() => {
+        convertCurrency();
+        plotHistoricalRates();
+    });
+
+    // Event listenerit eri elementeille
+    if (swapButton) {
+        swapButton.addEventListener('click', function() {
+            const currentFrom = fromSelect.value;
+            const currentTo = toSelect.value;
+            fromSelect.value = currentTo;
+            toSelect.value = currentFrom;
+            convertCurrency();
+            plotHistoricalRates();
+        });
+    }
+
+    if (fromSelect) {
+        fromSelect.addEventListener('change', function() {
+            if (amountInput) amountInput.value = previousAmount;
+            convertCurrency();
+            plotHistoricalRates();
+        });
+    }
+
+    if (toSelect) {
+        toSelect.addEventListener('change', function() {
+            if (amountInput) amountInput.value = previousAmount;
+            convertCurrency();
+            plotHistoricalRates();
+        });
+    }
+
+    if (amountInput) {
+        amountInput.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter') {
+                convertCurrency();
+                plotHistoricalRates();
+            }
+        });
+    }
+
+    if (chartTimeframeSelect) {
+        chartTimeframeSelect.addEventListener('change', plotHistoricalRates);
+    }
+
+    const historicalDateInput = document.getElementById('historicalDate');
+    const historicalFetchButton = document.querySelector('.historical-rates button');
+
+    if (historicalDateInput && historicalFetchButton) {
+        historicalDateInput.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                fetchHistoricalRates();
+            }
+        });
+        historicalFetchButton.addEventListener('click', fetchHistoricalRates);
+    }
+}); // DOMContentLoaded loppuu
